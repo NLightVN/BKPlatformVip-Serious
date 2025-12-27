@@ -1,0 +1,69 @@
+package com.example.backend.service;
+
+import com.example.backend.dto.request.CategoryCreationRequest;
+import com.example.backend.dto.response.CategoryResponse;
+import com.example.backend.entity.Category;
+import com.example.backend.exception.AppException;
+import com.example.backend.exception.ErrorCode;
+import com.example.backend.mapper.CategoryMapper;
+import com.example.backend.repository.CategoryRepository;
+import lombok.AccessLevel;
+import lombok.RequiredArgsConstructor;
+import lombok.experimental.FieldDefaults;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.stream.Collectors;
+
+@Service
+@RequiredArgsConstructor
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
+@Slf4j
+public class CategoryService {
+    CategoryRepository categoryRepository;
+    CategoryMapper categoryMapper;
+
+    private String normalize(String name) {
+        return name.trim().toLowerCase().replaceAll("\\s+", " ");
+    }
+
+    public CategoryResponse createCategory(CategoryCreationRequest request) {
+        String normalizedName = normalize(request.getName());
+        categoryRepository.findByName(normalizedName)
+                .ifPresent(c -> {
+                    throw new AppException(ErrorCode.CATEGORY_EXISTED);
+                });
+        request.setName(normalizedName);
+        Category category = categoryMapper.toCategory(request);
+        return categoryMapper.toCategoryResponse(categoryRepository.save(category));
+    }
+
+    public List<CategoryResponse> getAllCategories() {
+        return categoryRepository.findAll().stream()
+                .map(categoryMapper::toCategoryResponse)
+                .collect(Collectors.toList());
+    }
+
+    public CategoryResponse getCategoryById(String id) {
+        Category category = categoryRepository.findById(id)
+                .orElseThrow(() -> new AppException(ErrorCode.CATEGORY_NOT_EXIST));
+        return categoryMapper.toCategoryResponse(category);
+    }
+
+    public void deleteCategory(String categoryName){
+        String normalizedName = normalize(categoryName);
+        Category category = categoryRepository.findByName(normalizedName)
+                .orElseThrow(() -> new AppException(ErrorCode.CATEGORY_NOT_EXIST));
+        if(category.getProducts()!=null && !category.getProducts().isEmpty()){
+            throw new AppException(ErrorCode.CATEGORY_USED_BY_PRODUCT);
+        }
+        categoryRepository.delete(category);
+    }
+
+    public List<CategoryResponse> searchCategoriesBykeyword(String keyword) {
+        return categoryRepository.findByNameContainingIgnoreCase(keyword)
+                .stream().map(categoryMapper::toCategoryResponse).collect(Collectors.toList());
+    }
+
+}
