@@ -1,0 +1,4 @@
+-   Sửa issuer trong AuthenticationService
+-   sửa lại các errorcode (tìm hiểu về các lỗi bad request.....)
+-   xử lí phần lưu ảnh lên đâu đó ko phải DB -> khi update product cần xóa các ảnh cũ nếu update cả ảnh
+-   gọi google map api

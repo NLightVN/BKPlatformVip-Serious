@@ -1,0 +1,70 @@
+package com.example.backend.controller;
+
+import com.example.backend.dto.response.ApiResponse;
+import com.example.backend.dto.response.ShopResponse;
+import com.example.backend.dto.request.ShopCreationRequest;
+import com.example.backend.service.ShopService;
+import lombok.AccessLevel;
+import lombok.RequiredArgsConstructor;
+import lombok.experimental.FieldDefaults;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RestController
+@RequestMapping("/shops")
+@RequiredArgsConstructor
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
+@Slf4j
+public class ShopController {
+    ShopService shopService;
+
+    @PostMapping
+    ApiResponse createShop(@RequestBody ShopCreationRequest request) {
+        return ApiResponse.<ShopResponse>builder()
+                .result(shopService.createShop(request))
+                .build();
+    }
+
+//    @GetMapping
+//    public ApiResponse<List<ShopResponse>> getAllShops() {
+//        return ApiResponse.<List<ShopResponse>>builder()
+//                .result(shopService.getAllShop())
+//                .build();
+//    }
+
+    @GetMapping("/{shopId}")
+    ShopResponse getShopById(@PathVariable String shopId) {
+        return shopService.getShopById(shopId);
+    }
+
+    @GetMapping("/owner/{ownerUsername}")
+    ApiResponse<List<ShopResponse>> getShopByOwnerId(@PathVariable String ownerUsername) {
+        return ApiResponse.<List<ShopResponse>>builder()
+                .result(shopService.getAllShopByOwnerId(ownerUsername))
+                .build();
+    }
+
+
+    @GetMapping("/search")
+    ApiResponse<List<ShopResponse>> searchShops(
+            @RequestParam(required = false) String district,
+            @RequestParam(required = false) String province) {
+
+        List<ShopResponse> shops;
+
+        if(district != null && province != null) {
+            shops = shopService.getShopsByDistrictAndProvince(district, province);
+        } else if(district != null) {
+            shops = shopService.getShopsByDistrict(district);
+        } else if(province != null) {
+            shops = shopService.getShopsByProvince(province);
+        } else {
+            shops = shopService.getAllShop();
+        }
+
+        return ApiResponse.<List<ShopResponse>>builder().result(shops).build();
+    }
+
+}
