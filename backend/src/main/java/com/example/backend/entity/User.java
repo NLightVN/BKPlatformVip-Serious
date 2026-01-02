@@ -5,6 +5,7 @@ import lombok.*;
 import lombok.experimental.FieldDefaults;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
@@ -51,4 +52,16 @@ public class User {
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     List<Order> orders;
+
+    @Builder.Default
+    @Column(nullable = false, length = 20)
+    String status = "ACTIVE"; // ACTIVE, BANNED, DELETED, SUSPENDED
+
+    public void addShop(Shop shop) {
+        if (shops == null) {
+            shops = new ArrayList<>();
+        }
+        shops.add(shop);
+        shop.setOwner(this);
+    }
 }

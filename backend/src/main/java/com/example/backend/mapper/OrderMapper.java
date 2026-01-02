@@ -5,9 +5,11 @@ import com.example.backend.dto.request.OrderCreationRequest;
 import com.example.backend.dto.response.OrderResponse;
 import com.example.backend.entity.Order;
 import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 
-@Mapper(componentModel = "spring")
+@Mapper(componentModel = "spring", uses = {OrderItemMapper.class, ShipmentMapper.class})
 public interface OrderMapper {
-    public OrderResponse toOrderResponse(Order order);
-
+    @Mapping(target = "orderId", source = "id")
+    OrderResponse toOrderResponse(Order order);
 }
+

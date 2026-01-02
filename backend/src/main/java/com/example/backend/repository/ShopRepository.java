@@ -14,17 +14,28 @@ public interface ShopRepository extends JpaRepository<Shop, String> {
 
     List<Shop> findAllByOwner(User owner);
 
-    // query dbrr theo logic shop -> address -> ward -> district -> province
+    // theo District CODE
+    @Query("""
+        SELECT s FROM Shop s
+        WHERE s.address.ward.district.code = :districtCode
+    """)
+    List<Shop> findAllByDistrictCode(@Param("districtCode") String districtCode);
 
-    // Tìm theo Quận (District)
-    @Query("SELECT s FROM Shop s WHERE s.address.ward.district.fullName LIKE %:district%")
-    List<Shop> findAllByAddress_District(@Param("district") String district);
+    // theo Province CODE
+    @Query("""
+        SELECT s FROM Shop s
+        WHERE s.address.ward.district.province.code = :provinceCode
+    """)
+    List<Shop> findAllByProvinceCode(@Param("provinceCode") String provinceCode);
 
-    // Tìm theo Tỉnh (Province)
-    @Query("SELECT s FROM Shop s WHERE s.address.ward.district.province.fullName LIKE %:province%")
-    List<Shop> findAllByAddress_Province(@Param("province") String province);
-
-    // Tìm theo cả Quận và Tỉnh
-    @Query("SELECT s FROM Shop s WHERE s.address.ward.district.fullName LIKE %:district% AND s.address.ward.district.province.fullName LIKE %:province%")
-    List<Shop> findAllByAddress_DistrictAndAddress_Province(@Param("district") String district, @Param("province") String province);
+    // theo cả District + Province CODE
+    @Query("""
+        SELECT s FROM Shop s
+        WHERE s.address.ward.district.code = :districtCode
+          AND s.address.ward.district.province.code = :provinceCode
+    """)
+    List<Shop> findAllByDistrictAndProvinceCode(
+            @Param("districtCode") String districtCode,
+            @Param("provinceCode") String provinceCode
+    );
 }

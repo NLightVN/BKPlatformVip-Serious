@@ -19,13 +19,21 @@ public class ProductImageService {
             Map result = cloudinary.uploader().upload(
                     file.getBytes(),
                     ObjectUtils.asMap(
-                            "product-upload-preset", preset
+                            "upload_preset", preset  // Fixed: correct parameter name
                     )
             );
-            return result.get("secure_url").toString();
+            
+            // Check if secure_url exists
+            Object secureUrl = result.get("secure_url");
+            if (secureUrl == null) {
+                throw new RuntimeException("Cloudinary did not return secure_url. Response: " + result);
+            }
+            
+            return secureUrl.toString();
         } catch (Exception e) {
-            throw new RuntimeException("Upload image failed");
+            throw new RuntimeException("Upload image failed: " + e.getMessage(), e);
         }
     }
+    //OK
 }
 

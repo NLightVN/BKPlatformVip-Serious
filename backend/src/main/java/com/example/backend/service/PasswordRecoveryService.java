@@ -15,6 +15,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import org.springframework.transaction.annotation.Transactional;
+
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -33,9 +35,16 @@ public class PasswordRecoveryService {
     EntityManager entityManager;
 
     // 1. Gửi mail reset
+    @Transactional
     public void sendPasswordResetEmail(String email) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXIST));
+
+        //xoa token cu va flush
+        resetTokenRepository.findByUser(user).ifPresent(token -> {
+            resetTokenRepository.delete(token);
+            resetTokenRepository.flush(); 
+        });
 
         String token = UUID.randomUUID().toString();
         PasswordResetToken resetToken = PasswordResetToken.builder()
@@ -45,11 +54,11 @@ public class PasswordRecoveryService {
                 .build();
         resetTokenRepository.save(resetToken);
 
-        String resetLink = "http://localhost:8080/auth/reset-password?token=" + token;
+        String resetLink = "http://localhost:3000/reset-password?token=" + token;
         String subject = "Password Reset Request";
         String body = "Xin chào " + user.getUsername() + ",\n\n"
                 + "Vui lòng nhấn link sau để đổi mật khẩu (hết hạn sau 30 phút):\n"
-                + resetLink + "\n\nThân,\nHUST Team";
+                + resetLink + "\n\nThân,\nBK Platform Team";
 
         try {
             emailService.sendSimpleMail(user.getEmail(), subject, body);
@@ -89,6 +98,7 @@ public class PasswordRecoveryService {
 
         resetTokenRepository.delete(resetToken);
     }
+    //OK
 
 }
 

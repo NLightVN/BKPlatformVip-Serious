@@ -13,6 +13,7 @@ import lombok.experimental.FieldDefaults;
 @Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class AddressBook {
+
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "address_id")
@@ -22,14 +23,18 @@ public class AddressBook {
     String phone;
     String addressDetail;
 
-    @ManyToOne
-    @JoinColumn(name = "ward_code") // Map với cột ward_code trong SQL
-            Ward ward;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "ward_code")
+    Ward ward;
+
     public District getDistrict() {
         return ward != null ? ward.getDistrict() : null;
     }
 
+
     public Province getProvince() {
-        return (ward != null && ward.getDistrict() != null) ? ward.getDistrict().getProvince() : null;
+        return (ward != null && ward.getDistrict() != null)
+                ? ward.getDistrict().getProvince()
+                : null;
     }
 }

@@ -43,4 +43,8 @@ public class Product {
 
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
     Set<ProductImage> images;
+
+    @Builder.Default
+    @Column(nullable = false, length = 20)
+    String status = "ACTIVE"; // ACTIVE, DELETED, BANNED
 }

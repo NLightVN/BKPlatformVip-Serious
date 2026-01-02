@@ -10,7 +10,11 @@ import java.util.List;
 @Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class OrderResponse {
-    private String orderId;
-    private double totalAmount;
-    private List<OrderItemResponse> items;
+    String orderId;
+    double totalAmount;
+    String status; // NEW
+    java.time.LocalDateTime createdAt; // NEW
+    ShipmentResponse shipment; // NEW
+    boolean cancellationRequested; // NEW
+    List<OrderItemResponse> items;
 }
