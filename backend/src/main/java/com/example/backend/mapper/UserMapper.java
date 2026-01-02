@@ -4,9 +4,7 @@ import com.example.backend.dto.response.UserResponse;
 import com.example.backend.dto.request.UserCreationRequest;
 import com.example.backend.dto.request.UserUpdateRequest;
 import com.example.backend.entity.User;
-import org.mapstruct.Mapper;
-import org.mapstruct.Mapping;
-import org.mapstruct.MappingTarget;
+import org.mapstruct.*;
 
 // QUAN TRỌNG: Thêm uses = {AddressMapper.class} để map được Ward
 @Mapper(componentModel = "spring", uses = {AddressMapper.class, RoleMapper.class})
@@ -18,11 +16,7 @@ public interface UserMapper {
     UserResponse toUserResponse(User user);
 
     @Mapping(target = "roles", ignore = true)
-    @Mapping(target = "username", ignore = true) // Không cho update username
-    @Mapping(target = "shops", ignore = true)
-    @Mapping(target = "orders", ignore = true)
-    @Mapping(target = "cart", ignore = true)
-    @Mapping(target = "userId", ignore = true)
-    @Mapping(target = "createdDate", ignore = true)
+    @Mapping(target = "address", source = "address")
+    @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
     void updateUser(@MappingTarget User user, UserUpdateRequest request);
 }

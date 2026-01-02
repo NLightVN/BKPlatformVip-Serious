@@ -28,6 +28,8 @@ public class UserController {
                 .result(userService.createUser(request))
                 .build();
     }
+    //OK
+
 
     @GetMapping
     ApiResponse<List<UserResponse>> getAllUsers() {
@@ -35,6 +37,8 @@ public class UserController {
                 .result(userService.getAllUser())
                 .build();
     }
+    //OK
+
 
     @GetMapping("/{userId}")
     ApiResponse<UserResponse> getUser(@PathVariable("userId") String userId) {
@@ -42,6 +46,8 @@ public class UserController {
                 .result(userService.getUserById(userId))
                 .build();
     }
+    //OK
+
 
     @PutMapping("/{userId}")
     ApiResponse<UserResponse>updateUser(@RequestBody UserUpdateRequest request,@PathVariable("userId") String userId){
@@ -49,18 +55,24 @@ public class UserController {
                 .result(userService.updateUser(userId, request))
                 .build();
     }
+    //OK
+
 
     @DeleteMapping("/{userId}")
     ApiResponse<String> deleteUser(@PathVariable("userId") String userId) {
         userService.deleteUser(userId);
         return ApiResponse.<String>builder().result("User deleted").build();
     }
+    //OK
+
 
     @GetMapping("/myInfo")
     ApiResponse<UserResponse> getMyInfo() {
         return ApiResponse.<UserResponse>builder()
-                .result(userService.getMyINfor())
+                .result(userService.getMyInfor())
                 .build();
     }
+    //OK
+
 
 }

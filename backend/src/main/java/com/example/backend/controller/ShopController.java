@@ -4,6 +4,7 @@ import com.example.backend.dto.response.ApiResponse;
 import com.example.backend.dto.response.ShopResponse;
 import com.example.backend.dto.request.ShopCreationRequest;
 import com.example.backend.service.ShopService;
+import jakarta.validation.Valid;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -21,23 +22,26 @@ public class ShopController {
     ShopService shopService;
 
     @PostMapping
-    ApiResponse createShop(@RequestBody ShopCreationRequest request) {
+    ApiResponse createShop(@Valid @RequestBody ShopCreationRequest request){
         return ApiResponse.<ShopResponse>builder()
                 .result(shopService.createShop(request))
                 .build();
     }
+    //OK
 
-//    @GetMapping
-//    public ApiResponse<List<ShopResponse>> getAllShops() {
-//        return ApiResponse.<List<ShopResponse>>builder()
-//                .result(shopService.getAllShop())
-//                .build();
-//    }
+    @GetMapping
+    public ApiResponse<List<ShopResponse>> getAllShops() {
+        return ApiResponse.<List<ShopResponse>>builder()
+                .result(shopService.getAllShop())
+                .build();
+    }
+    //OK
 
     @GetMapping("/{shopId}")
     ShopResponse getShopById(@PathVariable String shopId) {
         return shopService.getShopById(shopId);
     }
+    //OK
 
     @GetMapping("/owner/{ownerUsername}")
     ApiResponse<List<ShopResponse>> getShopByOwnerId(@PathVariable String ownerUsername) {
@@ -45,7 +49,7 @@ public class ShopController {
                 .result(shopService.getAllShopByOwnerId(ownerUsername))
                 .build();
     }
-
+    //OK
 
     @GetMapping("/search")
     ApiResponse<List<ShopResponse>> searchShops(

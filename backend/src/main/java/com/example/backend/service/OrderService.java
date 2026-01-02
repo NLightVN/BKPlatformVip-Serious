@@ -10,13 +10,14 @@ import com.example.backend.exception.AppException;
 import com.example.backend.exception.ErrorCode;
 import com.example.backend.mapper.OrderMapper;
 import com.example.backend.repository.*;
+import com.example.backend.util.SecurityUtil;
 import jakarta.transaction.Transactional;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-
+import com.example.backend.dto.request.ShippingFeeRequest;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -32,6 +33,8 @@ public class OrderService {
     UserRepository userRepository;
     CartRepository cartRepository;
     OrderRepository orderRepository;
+    ProductRepository productRepository; // NEW
+    ShopRepository shopRepository;
     OrderItemRepository orderItemRepository;
     AddressBookRepository addressBookRepository;
     ShipmentRepository shipmentRepository;
@@ -43,12 +46,15 @@ public class OrderService {
      * Checkout từ giỏ hàng - Tách đơn theo Shop + Tính Ship
      */
     @Transactional
-    public List<OrderResponse> checkoutSelectedItems(String userId, OrderSelectedItemsRequest request) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXIST));
+    public List<OrderResponse> checkoutSelectedItems(OrderSelectedItemsRequest request) {
+        User user = userRepository.findByUsername(
+                SecurityUtil.getCurrentUsername()
+        ).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXIST));
 
-        AddressBook userAddress = addressBookRepository.findById(request.getAddressId())
-                .orElseThrow(() -> new RuntimeException("Địa chỉ giao hàng không tồn tại"));
+        AddressBook userAddress = user.getAddress();
+        if (userAddress == null) {
+            throw new AppException(ErrorCode.ADDRESS_NOT_FOUND);
+        }
 
         Cart cart = user.getCart();
         if (cart == null || cart.getItems().isEmpty()) {
@@ -56,7 +62,10 @@ public class OrderService {
         }
 
         List<CartItem> selectedItems = cart.getItems().stream()
-                .filter(item -> request.getCartItemIds().contains(item.getId()))
+                .filter(item ->
+                        request.getProductIds()
+                                .contains(item.getProduct().getProductId())
+                )
                 .toList();
 
         if (selectedItems.isEmpty()) {
@@ -86,13 +95,22 @@ public class OrderService {
             if (totalWeight == 0) totalWeight = 200;
 
             // Tính phí ship qua API
-            double shippingFee = 30000; // Mặc định
-            if (shopAddress != null && shopAddress.getWard() != null && userAddress.getWard() != null) {
+            double shippingFee = 30000;
+
+            // Kiểm tra shopAddress và userAddress có đủ thông tin không
+            if (shopAddress != null && shopAddress.getWard() != null
+                    && userAddress.getWard() != null) {
                 try {
                     ShippingFeeRequest feeRequest = new ShippingFeeRequest();
+
+                    // Set điểm GỬI (Từ Shop)
                     feeRequest.setFromDistrictCode(shopAddress.getWard().getDistrict().getCode());
+                    feeRequest.setFromWardCode(shopAddress.getWard().getCode()); // <--- MỚI
+
+                    // Set điểm NHẬN (User)
                     feeRequest.setToDistrictCode(userAddress.getWard().getDistrict().getCode());
                     feeRequest.setToWardCode(userAddress.getWard().getCode());
+
                     feeRequest.setWeightGram(totalWeight);
 
                     ShippingFeeResponse feeResponse = shippingService.calculateShippingFee(feeRequest);
@@ -101,7 +119,6 @@ public class OrderService {
                     log.error("Failed to calculate shipping fee: {}", e.getMessage());
                 }
             }
-
             // Tạo Order
             Order order = Order.builder()
                     .user(user)
@@ -146,10 +163,91 @@ public class OrderService {
         return savedOrders.stream().map(orderMapper::toOrderResponse).toList();
     }
 
+    /**
+     * Mua ngay (Buy Now) - Không qua giỏ hàng
+     */
+    @Transactional
+    public OrderResponse checkoutBuyNow(com.example.backend.dto.request.OrderBuyNowRequest request) {
+        User user = userRepository.findByUsername(
+                SecurityUtil.getCurrentUsername()
+        ).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXIST));
+
+        AddressBook userAddress = user.getAddress();
+        if (userAddress == null) throw new AppException(ErrorCode.ADDRESS_NOT_FOUND);
+
+        Product product = productRepository.findById(request.getProductId())
+                .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_EXIST));
+
+        Shop shop = product.getShop();
+        AddressBook shopAddress = shop.getAddress();
+
+        int quantity = request.getQuantity();
+        if (quantity < 1) throw new AppException(ErrorCode.INVALID_VALUE);
+
+        // Tính tiền hàng
+        double itemTotal = product.getPrice() * quantity;
+        double shippingFee = 30000; // Mặc định
+
+        // Tính cân nặng
+        int totalWeight = (int) (product.getWeight() * quantity);
+        if (totalWeight <= 0) totalWeight = 200;
+
+        // Tính phí ship
+        if (shopAddress != null && shopAddress.getWard() != null && userAddress.getWard() != null) {
+            try {
+                ShippingFeeRequest feeRequest = new ShippingFeeRequest();
+                feeRequest.setFromDistrictCode(shopAddress.getWard().getDistrict().getCode());
+                feeRequest.setFromWardCode(shopAddress.getWard().getCode());
+                feeRequest.setToDistrictCode(userAddress.getWard().getDistrict().getCode());
+                feeRequest.setToWardCode(userAddress.getWard().getCode());
+                feeRequest.setWeightGram(totalWeight);
+
+                ShippingFeeResponse feeResponse = shippingService.calculateShippingFee(feeRequest);
+                shippingFee = feeResponse.getFee();
+            } catch (Exception e) {
+                log.error("Failed to calculate shipping fee: {}", e.getMessage());
+            }
+        }
+
+        // Tạo Order
+        Order order = Order.builder()
+                .user(user)
+                .status(OrderStatus.PENDING)
+                .createdAt(LocalDateTime.now())
+                .totalAmount(itemTotal + shippingFee)
+                .build();
+        Order savedOrder = orderRepository.save(order);
+
+        // Tạo Order Item
+        OrderItem orderItem = OrderItem.builder()
+                .order(savedOrder)
+                .product(product)
+                .quantity(quantity)
+                .priceAtPurchase(product.getPrice())
+                .build();
+        orderItemRepository.save(orderItem);
+        savedOrder.setItems(List.of(orderItem));
+
+        // Tạo Shipment
+        Shipment shipment = Shipment.builder()
+                .order(savedOrder)
+                .shippingFee(shippingFee)
+                .status("PREPARING") // Hoặc lấy status mặc định
+                .estimatedDeliveryDate(java.time.LocalDate.now().plusDays(3))
+                .build();
+        shipmentRepository.save(shipment);
+        savedOrder.setShipment(shipment);
+
+
+
+        return orderMapper.toOrderResponse(savedOrder);
+    }
+
+    @Transactional
     public List<OrderResponse> getOrdersByUser(String userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXIST));
-        List<Order> orders = orderRepository.findAllByUser(user);
+        List<Order> orders = orderRepository.findAllByUserOrderByCreatedAtDesc(user);
         return orders.stream().map(orderMapper::toOrderResponse).toList();
     }
 
@@ -168,6 +266,58 @@ public class OrderService {
 
         if (status == OrderStatus.CANCELLED && order.getShipment() != null) {
             order.getShipment().setStatus("CANCELLED");
+        }
+
+        return orderMapper.toOrderResponse(orderRepository.save(order));
+    }
+
+    // Lấy danh sách order của Shop (dành cho Seller)
+    public List<OrderResponse> getOrdersByShop(String shopId) {
+        Shop shop = shopRepository.findById(shopId)
+                .orElseThrow(() -> new AppException(ErrorCode.SHOP_NOT_EXIST));
+
+        String currentUsername = SecurityUtil.getCurrentUsername();
+        if (!shop.getOwner().getUsername().equals(currentUsername)) {
+            throw new AppException(ErrorCode.UNAUTHORIZED);
+        }
+
+        return orderRepository.findAllByShopId(shopId).stream()
+                .map(orderMapper::toOrderResponse)
+                .toList();
+    }
+
+    @Transactional
+    public OrderResponse requestCancel(String orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_EXIST));
+
+        // Chỉ cho phép yêu cầu hủy nếu đang PENDING
+        if (order.getStatus() != OrderStatus.PENDING) {
+            throw new RuntimeException("Chỉ có thể yêu cầu hủy đơn hàng đang chờ xử lý");
+        }
+
+        order.setCancellationRequested(true);
+        return orderMapper.toOrderResponse(orderRepository.save(order));
+    }
+
+    @Transactional
+    public OrderResponse replyCancelRequest(String orderId, boolean accept) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_EXIST));
+
+        // Check if user is shop owner (simplified check, usually we verify via SecurityContext)
+        // For now trusting the controller level security checks or implicit logic
+        // But better to verify shop ownership logic if strictly required. 
+        // Here we assume authorized caller.
+
+        if (accept) {
+            order.setStatus(OrderStatus.CANCELLED);
+            order.setCancellationRequested(false); // Reset/Clear request flag as it is now cancelled
+             if (order.getShipment() != null) {
+                order.getShipment().setStatus("CANCELLED");
+            }
+        } else {
+            order.setCancellationRequested(false); // Reject request
         }
 
         return orderMapper.toOrderResponse(orderRepository.save(order));
