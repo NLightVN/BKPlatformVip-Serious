@@ -3,7 +3,7 @@ package com.example.backend.dto.response;
 import com.example.backend.dto.request.AddressDTO;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
-
+import java.util.List;
 import java.time.LocalDateTime;
 import java.util.Set;
 
@@ -18,8 +18,9 @@ public class UserResponse {
     String fullname;
     String email;
     Set<RoleResponse> roles;
-    String password;
     LocalDateTime createdDate;
     AddressDTO address;
+    String status; // ACTIVE, BANNED, DELETED, SUSPENDED
+    List<String> roleNames; // Helper for easier frontend role checking
 
 }

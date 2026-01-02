@@ -1,19 +1,25 @@
-package com.example.backend.dto.response;
+    package com.example.backend.dto.response;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
-import lombok.*;
-import lombok.experimental.FieldDefaults;
+    import com.fasterxml.jackson.annotation.JsonInclude;
+    import lombok.*;
+    import lombok.experimental.FieldDefaults;
 
-@Data
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
-@FieldDefaults(level = AccessLevel.PRIVATE)
-@JsonInclude(JsonInclude.Include.NON_NULL)
-public class ApiResponse<T> {
-    @Builder.Default
-    int code = 1000;
+    import java.time.LocalDateTime;
 
-    String message;
-    T result;
-}
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @FieldDefaults(level = AccessLevel.PRIVATE)
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public class ApiResponse<T> {
+
+        @Builder.Default
+        int code = 1000;
+
+        String message;
+        T result;
+
+        LocalDateTime timestamp;
+        String path;
+    }

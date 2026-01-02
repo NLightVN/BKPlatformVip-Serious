@@ -4,6 +4,5 @@ import java.util.List;
 
 @Data
 public class OrderSelectedItemsRequest {
-    List<String> cartItemIds;
-    String addressId;
+    List<String> productIds;   // chọn trong cart
 }

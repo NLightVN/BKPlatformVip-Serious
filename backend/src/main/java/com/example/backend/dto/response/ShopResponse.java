@@ -18,4 +18,5 @@ public class ShopResponse {
     String ownerUsername;
 
     AddressDTO address;
+    String status; // ACTIVE, DELETED, BANNED
 }

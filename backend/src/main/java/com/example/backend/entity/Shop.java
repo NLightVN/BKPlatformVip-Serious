@@ -34,4 +34,8 @@ public class Shop {
 
     @OneToMany(mappedBy = "shop", cascade = CascadeType.ALL, orphanRemoval = true)
     List<Product> products;
+
+    @Builder.Default
+    @Column(nullable = false, length = 20)
+    String status = "ACTIVE"; // ACTIVE, DELETED, BANNED
 }

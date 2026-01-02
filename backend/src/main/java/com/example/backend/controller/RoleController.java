@@ -26,6 +26,7 @@ public class RoleController {
                 .result(roleService.create(request))
                 .build();
     }
+    //OK
 
     @GetMapping
     ApiResponse<List<RoleResponse>> getAll() {
@@ -33,10 +34,12 @@ public class RoleController {
                 .result(roleService.getAll())
                 .build();
     }
+    //OK
 
     @DeleteMapping("/{role}")
     ApiResponse<Void> delete(@PathVariable String role) {
         roleService.delete(role);
         return ApiResponse.<Void>builder().build();
     }
+    //OK
 }

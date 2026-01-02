@@ -60,17 +60,8 @@ public class AuthenticationService {
 
     public AuthenticationResponse authenticate(AuthenticationRequest request) {
         var user = userRepository.findByUsername(request.getUsername()).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXIST));
-        log.info(">>> Auth user found: {}", user.getUsername());
-        log.info(">>> Auth user email: {}", user.getEmail());
-        log.info(">>> Input password: {}", request.getPassword());
-        log.info(">>> Stored hash: {}", user.getPassword());
         boolean authenticated = passwordEncoder.matches(request.getPassword(), user.getPassword());
         if (!authenticated) {
-            log.error("Invalid username or password");
-            log.info("Password encoder instance: {}", passwordEncoder);
-            log.info("is match: {}", passwordEncoder.matches("12345678910", user.getPassword()));
-            log.info(request.getPassword());
-            log.info(user.getPassword());
             throw new AppException(ErrorCode.UNAUTHENTICATED);
         }
         var token = generateToken(user);
@@ -80,13 +71,13 @@ public class AuthenticationService {
                 .build();
     }
 
-    public IntrospectResponse introspect(IntrospectRequest request) throws ParseException, JOSEException{
+    public IntrospectResponse introspect(IntrospectRequest request) throws ParseException, JOSEException {
         var token = request.getToken();
         boolean isValid = true;
 
-        try{
-            verifyToken(token,false);
-        }catch (AppException e){
+        try {
+            verifyToken(token, false);
+        } catch (AppException e) {
             isValid = false;
             return IntrospectResponse.builder()
                     .valid(isValid)
@@ -113,10 +104,10 @@ public class AuthenticationService {
 
         JWSObject jwsObject = new JWSObject(header, payload);
 
-        try{
+        try {
             jwsObject.sign(new MACSigner(SIGNER_KEY.getBytes()));
             return jwsObject.serialize();
-        }catch(JOSEException e){
+        } catch (JOSEException e) {
             throw new RuntimeException(e);
         }
     }
@@ -124,21 +115,21 @@ public class AuthenticationService {
     private SignedJWT verifyToken(String token, boolean isRefresh) throws JOSEException, ParseException {
         JWSVerifier verifier = new MACVerifier(SIGNER_KEY);
         SignedJWT signedJWT = SignedJWT.parse(token);
-        Date expiryTime =(isRefresh)
+        Date expiryTime = (isRefresh)
                 ? new Date(signedJWT
-                    .getJWTClaimsSet()
-                    .getIssueTime()
-                    .toInstant()
-                    .plus(REFRESHABLE_DURATION, ChronoUnit.DAYS)
-                    .toEpochMilli()
-                     )
+                .getJWTClaimsSet()
+                .getIssueTime()
+                .toInstant()
+                .plus(REFRESHABLE_DURATION, ChronoUnit.DAYS)
+                .toEpochMilli()
+        )
                 : signedJWT.getJWTClaimsSet().getExpirationTime();
         var verified = signedJWT.verify(verifier);
-        if(!(verified && expiryTime.after(new Date()))) {
+        if (!(verified && expiryTime.after(new Date()))) {
             throw new AppException(ErrorCode.UNAUTHENTICATED);
         }
 
-        if(invalidatedTokenRepository.existsById(signedJWT.getJWTClaimsSet().getJWTID())){
+        if (invalidatedTokenRepository.existsById(signedJWT.getJWTClaimsSet().getJWTID())) {
             throw new AppException(ErrorCode.UNAUTHENTICATED);
         }
 
@@ -146,7 +137,7 @@ public class AuthenticationService {
     }
 
     public AuthenticationResponse refreshToken(RefreshTokenRequest refreshToken) throws ParseException, JOSEException {
-        var signedJWT = verifyToken(refreshToken.getToken(),true);
+        var signedJWT = verifyToken(refreshToken.getToken(), true);
 
         var jit = signedJWT.getJWTClaimsSet().getJWTID();
         var expiryTime = signedJWT.getJWTClaimsSet().getExpirationTime();
@@ -157,9 +148,9 @@ public class AuthenticationService {
                 .build();
         invalidatedTokenRepository.save(invalidatedToken);
 
-        var username =signedJWT.getJWTClaimsSet().getSubject();
+        var username = signedJWT.getJWTClaimsSet().getSubject();
         var user = userRepository.findByUsername(username).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXIST));
-        var token  = generateToken(user);
+        var token = generateToken(user);
         return AuthenticationResponse.builder()
                 .token(token)
                 .authenticated(true)
@@ -167,8 +158,8 @@ public class AuthenticationService {
     }
 
     public void logout(LogoutRequest request) throws ParseException, JOSEException {
-        try{
-            var signedJWT = verifyToken(request.getToken(),true);
+        try {
+            var signedJWT = verifyToken(request.getToken(), true);
             String jit = signedJWT.getJWTClaimsSet().getJWTID();
             Date expiryTime = signedJWT.getJWTClaimsSet().getExpirationTime();
 
@@ -177,7 +168,7 @@ public class AuthenticationService {
                     .expiryTime(expiryTime)
                     .build();
             invalidatedTokenRepository.save(invalidatedToken);
-        }catch (AppException e) {
+        } catch (AppException e) {
             log.info("Token already expired");
         }
     }
@@ -185,12 +176,11 @@ public class AuthenticationService {
     private String buildScope(User user) {
         StringJoiner stringJoiner = new StringJoiner(" ");
 
-        if (!CollectionUtils.isEmpty(user.getRoles()))
-            user.getRoles().forEach(role -> {
-                stringJoiner.add("ROLE_" + role.getName());
-                if (!CollectionUtils.isEmpty(role.getPermissions()))
-                    role.getPermissions().forEach(permission -> stringJoiner.add(permission.getName()));
-            });
+        if (!CollectionUtils.isEmpty(user.getRoles())) {
+            user.getRoles().forEach(role ->
+                    stringJoiner.add("ROLE_" + role.getName())
+            );
+        }
 
         return stringJoiner.toString();
     }

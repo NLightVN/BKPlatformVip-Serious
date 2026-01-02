@@ -6,6 +6,5 @@ import org.springframework.web.multipart.MultipartFile;
 @Data
 public class ProductImageUploadRequest {
     MultipartFile file;
-    String imageType;
-    String description;
+
 }

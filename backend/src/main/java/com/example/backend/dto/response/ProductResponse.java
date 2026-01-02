@@ -17,4 +17,5 @@ public class ProductResponse {
     String shopId;                // Id của shop
     Set<CategoryResponse> categories;       // Tên các category
     Set<ProductImageResponse> images;  // Danh sách ảnh
+    String status;  // ACTIVE, DELETED, BANNED
 }

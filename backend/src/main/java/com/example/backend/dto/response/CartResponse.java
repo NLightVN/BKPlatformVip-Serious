@@ -10,7 +10,7 @@ import java.util.List;
 @Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class CartResponse {
-    private String cartId;
+    private String id;
     private List<CartItemResponse> items;
     double totalAmount;
 }
