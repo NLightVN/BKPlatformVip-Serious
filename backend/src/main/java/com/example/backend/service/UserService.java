@@ -6,11 +6,15 @@ import com.example.backend.dto.request.UserCreationRequest;
 import com.example.backend.dto.request.UserUpdateRequest;
 import com.example.backend.entity.User;
 import com.example.backend.entity.Role;
+import com.example.backend.entity.AddressBook;
+import com.example.backend.entity.Ward;
 import com.example.backend.exception.AppException;
 import com.example.backend.exception.ErrorCode;
 import com.example.backend.mapper.UserMapper;
 import com.example.backend.repository.RoleRepository;
 import com.example.backend.repository.UserRepository;
+import com.example.backend.repository.WardRepository;
+import com.example.backend.util.SecurityUtil;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -26,6 +30,8 @@ import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
 
+import static com.example.backend.util.SecurityUtil.requireAdmin;
+
 @Service
 @RequiredArgsConstructor
 // tạo constructor chứa tất cả các field final
@@ -38,8 +44,9 @@ public class UserService {
     UserMapper userMapper;
     PasswordEncoder passwordEncoder;
     RoleRepository roleRepository;
+    WardRepository wardRepository;
 
-@Transactional
+    @Transactional
     public UserResponse createUser(UserCreationRequest request) {
         if (userRepository.existsByUsername(request.getUsername())) {
             throw new AppException(ErrorCode.USERNAME_EXISTED);
@@ -60,46 +67,118 @@ public class UserService {
         return userMapper.toUserResponse(userRepository.save(user));
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
+
     public List<UserResponse> getAllUser() {
         // chuyển list user lấy từ database thành 1 stream để dùng method map giúp thực hiện song song user ->
         // userMapper.toUserResponse(user) sau đó chuyển lại thành list
+        requireAdmin();
         return userRepository.findAll().stream().map(userMapper::toUserResponse).toList();
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
+
     public UserResponse getUserById(String userId) {
+        requireAdmin();
         return userMapper.toUserResponse(
                 userRepository.findById(userId).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXIST)));
     }
 
 
-    @PostAuthorize("returnObject.username == authentication.name")
     public UserResponse updateUser(String userId, UserUpdateRequest request) {
-        User user = userRepository.findById(userId).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXIST));
 
-        userMapper.updateUser(user, request);
-        user.setPassword(passwordEncoder.encode(user.getPassword()));
+        String currentUsername = SecurityUtil.getCurrentUsername();
 
-        var roles = roleRepository.findAllById(request.getRoles());
-        user.setRoles(new HashSet<>(roles));
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXIST));
+
+        if (request.getEmail() != null
+                && !request.getEmail().equals(user.getEmail())
+                && userRepository.existsByEmail(request.getEmail())) {
+            throw new AppException(ErrorCode.EMAIL_EXISTED);
+        }
+
+        if (!user.getUsername().equals(currentUsername)
+                && !SecurityUtil.hasRole("ADMIN")) {
+            throw new AppException(ErrorCode.UNAUTHORIZED);
+        }
+
+        // Handle address update manually
+        if (request.getAddress() != null) {
+            AddressBook addressBook = user.getAddress();
+            if (addressBook == null) {
+                addressBook = new AddressBook();
+            }
+            addressBook.setName(request.getAddress().getName());
+            addressBook.setPhone(request.getAddress().getPhone());
+            addressBook.setAddressDetail(request.getAddress().getAddressDetail());
+            
+            if (request.getAddress().getWardCode() != null) {
+                Ward ward = wardRepository.findById(request.getAddress().getWardCode())
+                        .orElseThrow(() -> new AppException(ErrorCode.WARD_NOT_FOUND));
+                addressBook.setWard(ward);
+            }
+            
+            user.setAddress(addressBook);
+        }
+
+        // Update other fields
+        if (request.getFullname() != null) {
+            user.setFullname(request.getFullname());
+        }
+        if (request.getEmail() != null) {
+            user.setEmail(request.getEmail());
+        }
+
+        if (request.getPassword() != null && !request.getPassword().isBlank()) {
+            user.setPassword(passwordEncoder.encode(request.getPassword()));
+        }
+
+        if (request.getRoles() != null) {
+            if (!SecurityUtil.hasRole("ADMIN")) {
+                throw new AppException(ErrorCode.UNAUTHORIZED);
+            }
+            var roles = roleRepository.findAllById(request.getRoles());
+            user.setRoles(new HashSet<>(roles));
+        }
 
         return userMapper.toUserResponse(userRepository.save(user));
     }
 
 
-    public UserResponse getMyINfor() {
+
+    public UserResponse getMyInfor() {
         // SecurityContextHolder
         //   ↳ SecurityContext : đối tượng trung gian để lưu  Ai đang đăng nhập, Quyền của họ là gì
         //        ↳ Authentication: lưu principal, credentials, authoritizes, details, authenticated, name
-        var context = SecurityContextHolder.getContext();
-        String name = context.getAuthentication().getName();
+        String name = SecurityUtil.getCurrentUsername();
         User user = userRepository.findByUsername(name).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXIST));
         return userMapper.toUserResponse(user);
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
+
     public void deleteUser(String userId) {
+        requireAdmin();
         userRepository.deleteById(userId);
+    }
+
+    // Ban user (Admin only)
+    @Transactional
+    public UserResponse banUser(String userId) {
+        requireAdmin();
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXIST));
+        
+        user.setStatus("BANNED");
+        return userMapper.toUserResponse(userRepository.save(user));
+    }
+
+    // Unban user (Admin only)
+    @Transactional
+    public UserResponse unbanUser(String userId) {
+        requireAdmin();
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXIST));
+        
+        user.setStatus("ACTIVE");
+        return userMapper.toUserResponse(userRepository.save(user));
     }
 }

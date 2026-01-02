@@ -17,10 +17,6 @@ public class ProductImage {
     @GeneratedValue(strategy = GenerationType.UUID)
     String productImageId;
 
-    String description;
-
-    String imageType;
-
     String imageUrl;
 
     @ManyToOne(fetch = FetchType.LAZY)

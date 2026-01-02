@@ -20,14 +20,6 @@ public class Role {
 
     String description;
 
-    @ManyToMany
-    @JoinTable(
-            name = "role_permissions",
-            joinColumns = @JoinColumn(name = "role_name"),
-            inverseJoinColumns = @JoinColumn(name = "permission_name")
-    )
-    Set<Permission> permissions;
-
     @ManyToMany(mappedBy = "roles")
     Set<User> users;
 }

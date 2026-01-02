@@ -40,4 +40,7 @@ public class Order {
     @OneToOne(mappedBy = "order", cascade = CascadeType.ALL)
     private Payment payment;
 
+    @Builder.Default
+    @Column(columnDefinition = "boolean default false")
+    boolean cancellationRequested = false;
 }

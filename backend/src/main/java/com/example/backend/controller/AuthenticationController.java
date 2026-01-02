@@ -33,6 +33,7 @@ public class AuthenticationController {
                 .result(authenticationService.authenticate(request))
                 .build();
     }
+    //OK
 
     @GetMapping("/introspect")
     ApiResponse<IntrospectResponse> introspect(@RequestBody IntrospectRequest request) throws ParseException, JOSEException {
@@ -43,6 +44,7 @@ public class AuthenticationController {
                 .result(result)
                 .build();
     }
+    //OK
 
     @PostMapping("/refresh")
     ApiResponse<AuthenticationResponse> refreshToken(@RequestBody RefreshTokenRequest request)
@@ -54,10 +56,12 @@ public class AuthenticationController {
                 .result(result)
                 .build();
     }
+    //OK
 
     @PostMapping("/logout")
     ApiResponse<Void> logout(@RequestBody LogoutRequest request) throws ParseException, JOSEException {
         authenticationService.logout(request);
         return ApiResponse.<Void>builder().build();
     }
+    //OK
 }

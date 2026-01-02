@@ -41,9 +41,7 @@ public interface ProductMapper {
 
         return product.getImages().stream()
                 .map(img -> ProductImageResponse.builder()
-                        .imageType(img.getImageType())
                         .imageUrl(img.getImageUrl())
-                        .description(img.getDescription())
                         .build()
                 )
                 .collect(Collectors.toSet());
