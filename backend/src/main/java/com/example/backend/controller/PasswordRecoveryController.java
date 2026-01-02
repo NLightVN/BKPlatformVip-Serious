@@ -20,6 +20,7 @@ public class PasswordRecoveryController {
         recoveryService.sendPasswordResetEmail(email);
         return "✅ Check your email for reset link!";
     }
+    //OK
 
     // 2. Reset password
     @PostMapping("/reset-password")
@@ -27,4 +28,5 @@ public class PasswordRecoveryController {
         recoveryService.resetPassword(token, newPassword);
         return "✅ Password reset successfully!";
     }
+    //OK
 }

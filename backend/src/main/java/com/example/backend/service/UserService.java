@@ -11,6 +11,7 @@ import com.example.backend.exception.ErrorCode;
 import com.example.backend.mapper.UserMapper;
 import com.example.backend.repository.RoleRepository;
 import com.example.backend.repository.UserRepository;
+import com.example.backend.util.SecurityUtil;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -26,6 +27,8 @@ import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
 
+import static com.example.backend.util.SecurityUtil.requireAdmin;
+
 @Service
 @RequiredArgsConstructor
 // tạo constructor chứa tất cả các field final
@@ -39,7 +42,7 @@ public class UserService {
     PasswordEncoder passwordEncoder;
     RoleRepository roleRepository;
 
-@Transactional
+    @Transactional
     public UserResponse createUser(UserCreationRequest request) {
         if (userRepository.existsByUsername(request.getUsername())) {
             throw new AppException(ErrorCode.USERNAME_EXISTED);
@@ -60,46 +63,67 @@ public class UserService {
         return userMapper.toUserResponse(userRepository.save(user));
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
+
     public List<UserResponse> getAllUser() {
         // chuyển list user lấy từ database thành 1 stream để dùng method map giúp thực hiện song song user ->
         // userMapper.toUserResponse(user) sau đó chuyển lại thành list
+        requireAdmin();
         return userRepository.findAll().stream().map(userMapper::toUserResponse).toList();
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
+
     public UserResponse getUserById(String userId) {
+        requireAdmin();
         return userMapper.toUserResponse(
                 userRepository.findById(userId).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXIST)));
     }
 
 
-    @PostAuthorize("returnObject.username == authentication.name")
     public UserResponse updateUser(String userId, UserUpdateRequest request) {
-        User user = userRepository.findById(userId).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXIST));
+
+        String currentUsername = SecurityUtil.getCurrentUsername();
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXIST));
+
+        if (!user.getUsername().equals(currentUsername)
+                && !SecurityUtil.hasRole("ADMIN")) {
+            throw new AppException(ErrorCode.UNAUTHORIZED);
+        }
 
         userMapper.updateUser(user, request);
-        user.setPassword(passwordEncoder.encode(user.getPassword()));
 
-        var roles = roleRepository.findAllById(request.getRoles());
-        user.setRoles(new HashSet<>(roles));
+        if (request.getPassword() != null && !request.getPassword().isBlank()) {
+            user.setPassword(passwordEncoder.encode(request.getPassword()));
+        }
+
+        if (request.getRoles() != null) {
+            if (!SecurityUtil.hasRole("ADMIN")) {
+                throw new AppException(ErrorCode.UNAUTHORIZED);
+            }
+            var roles = roleRepository.findAllById(request.getRoles());
+            user.setRoles(new HashSet<>(roles));
+        }
+
 
         return userMapper.toUserResponse(userRepository.save(user));
     }
 
 
-    public UserResponse getMyINfor() {
+
+    public UserResponse getMyInfor() {
         // SecurityContextHolder
         //   ↳ SecurityContext : đối tượng trung gian để lưu  Ai đang đăng nhập, Quyền của họ là gì
         //        ↳ Authentication: lưu principal, credentials, authoritizes, details, authenticated, name
-        var context = SecurityContextHolder.getContext();
-        String name = context.getAuthentication().getName();
+        String name = SecurityUtil.getCurrentUsername();
         User user = userRepository.findByUsername(name).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXIST));
         return userMapper.toUserResponse(user);
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
+
     public void deleteUser(String userId) {
+
+        requireAdmin();
         userRepository.deleteById(userId);
     }
 }

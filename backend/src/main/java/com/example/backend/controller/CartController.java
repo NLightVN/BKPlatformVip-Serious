@@ -27,13 +27,14 @@ public class CartController {
                 .build();
     }
 
-    @DeleteMapping("/remove/{userId}/{cartItemId}")
+    @DeleteMapping("/remove/{userId}/{productId}")
     public ApiResponse<CartResponse> removeFromCart(@PathVariable String userId,
-                                                    @PathVariable String cartItemId) {
+                                                    @PathVariable String productId) {
         return ApiResponse.<CartResponse>builder()
-                .result(cartService.removeFromCart(userId, cartItemId))
+                .result(cartService.removeFromCart(userId, productId))
                 .build();
     }
+    //OK
 
     @DeleteMapping("/clear/{userId}")
     public ApiResponse<CartResponse> clearCart(@PathVariable String userId) {
@@ -48,4 +49,5 @@ public class CartController {
                 .result(cartService.getCartByUser(userId))
                 .build();
     }
+    //OK
 }

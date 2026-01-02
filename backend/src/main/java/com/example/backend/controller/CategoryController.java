@@ -4,6 +4,7 @@ import com.example.backend.dto.request.CategoryCreationRequest;
 import com.example.backend.dto.response.ApiResponse;
 import com.example.backend.dto.response.CategoryResponse;
 import com.example.backend.service.CategoryService;
+import com.example.backend.util.SecurityUtil;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -20,6 +21,7 @@ public class CategoryController {
 
     @PostMapping
     ApiResponse<CategoryResponse> createCategory(@RequestBody CategoryCreationRequest request) {
+        SecurityUtil.requireAdmin();
         return ApiResponse.<CategoryResponse>builder()
                 .result(categoryService.createCategory(request))
                 .build();
@@ -50,7 +52,7 @@ public class CategoryController {
     @GetMapping("/search/{keyword}")
     ApiResponse<List<CategoryResponse>> getCategoryByKeyword(@PathVariable String keyword) {
         return ApiResponse.<List<CategoryResponse>>builder()
-                .result(categoryService.searchCategoriesBykeyword(keyword))
+                .result(categoryService.searchCategoriesByKeyword(keyword))
                 .build();
     }
 }

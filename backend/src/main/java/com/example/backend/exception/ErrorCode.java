@@ -27,6 +27,9 @@ public enum ErrorCode {
     CART_EMPTY(1017, "Cart is empty", HttpStatus.BAD_REQUEST),
     CART_ITEM_NOT_EXIST(1018, "Cart item not exist", HttpStatus.BAD_REQUEST),
     ORDER_NOT_EXIST(1019, "Order not exist", HttpStatus.BAD_REQUEST),
+    WARD_NOT_FOUND(1020, "Ward not found", HttpStatus.BAD_REQUEST),
+    INVALID_VALUE(1021, "Invalid value", HttpStatus.BAD_REQUEST),
+    ADDRESS_NOT_FOUND(1022, "Address does not exist", HttpStatus.BAD_REQUEST),
     ;
 
     private final int code;

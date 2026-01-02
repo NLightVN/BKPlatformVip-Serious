@@ -9,6 +9,7 @@ import org.mapstruct.Mapping; //
 
 @Mapper(componentModel = "spring")
 public interface CartMapper {
+    @Mapping(source = "id", target = "id")
     CartResponse toCartResponse(Cart cart);
     // MapStruct sẽ dùng method này để chuyển đổi từng item trong list
     @Mapping(source = "product.productId", target = "productId")

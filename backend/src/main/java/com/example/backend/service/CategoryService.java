@@ -7,6 +7,7 @@ import com.example.backend.exception.AppException;
 import com.example.backend.exception.ErrorCode;
 import com.example.backend.mapper.CategoryMapper;
 import com.example.backend.repository.CategoryRepository;
+import com.example.backend.util.SecurityUtil;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -52,6 +53,7 @@ public class CategoryService {
     }
 
     public void deleteCategory(String categoryName){
+        SecurityUtil.requireAdmin();
         String normalizedName = normalize(categoryName);
         Category category = categoryRepository.findByName(normalizedName)
                 .orElseThrow(() -> new AppException(ErrorCode.CATEGORY_NOT_EXIST));
@@ -61,9 +63,11 @@ public class CategoryService {
         categoryRepository.delete(category);
     }
 
-    public List<CategoryResponse> searchCategoriesBykeyword(String keyword) {
-        return categoryRepository.findByNameContainingIgnoreCase(keyword)
-                .stream().map(categoryMapper::toCategoryResponse).collect(Collectors.toList());
+    public List<CategoryResponse> searchCategoriesByKeyword(String keyword) {
+        String normalized = normalize(keyword);
+        return categoryRepository.findByNameContainingIgnoreCase(normalized)
+                .stream().map(categoryMapper::toCategoryResponse)
+                .collect(Collectors.toList());
     }
 
 }

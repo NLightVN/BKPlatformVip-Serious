@@ -89,6 +89,7 @@ public class PasswordRecoveryService {
 
         resetTokenRepository.delete(resetToken);
     }
+    //OK
 
 }
 

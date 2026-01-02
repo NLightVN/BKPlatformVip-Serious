@@ -3,6 +3,7 @@ package com.example.backend.controller;
 import com.example.backend.dto.request.ProductCreationRequest;
 import com.example.backend.dto.request.ProductImageUploadRequest;
 import com.example.backend.dto.response.ApiResponse;
+import com.example.backend.dto.response.ProductImageResponse;
 import com.example.backend.dto.response.ProductResponse;
 import com.example.backend.service.ProductService;
 import lombok.AccessLevel;
@@ -29,6 +30,7 @@ public class ProductController {
                 .result(productService.createProduct(request))
                 .build();
     }
+    //OK
 
     @GetMapping("/shop/{shopId}")
     ApiResponse<List<ProductResponse>> getAllProductsByShopId(@PathVariable String shopId) {
@@ -36,6 +38,7 @@ public class ProductController {
                 .result(productService.getAllProducts(shopId))
                 .build();
     }
+    //OK
 
 
     @GetMapping("/{productId}")
@@ -44,6 +47,7 @@ public class ProductController {
                 .result(productService.getProductById(productId))
                 .build();
     }
+    //OK
 
     @PutMapping("/{productId}")
     ApiResponse<ProductResponse> updateProduct(@PathVariable String productId,
@@ -52,6 +56,7 @@ public class ProductController {
                 .result(productService.updateProduct(request, productId))
                 .build();
     }
+    //OK
 
     @DeleteMapping("/{productId}")
     ApiResponse<String> deleteProduct(@PathVariable String productId) {
@@ -60,6 +65,7 @@ public class ProductController {
                 .result("Product deleted")
                 .build();
     }
+    //OK
 
     @GetMapping("/category/{categoryName}")
     ApiResponse<List<ProductResponse>> getProductsByCategory(@PathVariable String categoryName) {
@@ -67,6 +73,7 @@ public class ProductController {
                 .result(productService.getProductsByCategory(categoryName))
                 .build();
     }
+    //OK
 
     @GetMapping("/brand/{brand}")
     ApiResponse<List<ProductResponse>> getProductsByBrand(@PathVariable String brand) {
@@ -74,6 +81,7 @@ public class ProductController {
                 .result(productService.getProductsByBrand(brand))
                 .build();
     }
+    //OK
 
     @GetMapping("/search/{keyword}")
     ApiResponse<List<ProductResponse>> searchProduct(@PathVariable String keyword) {
@@ -81,40 +89,27 @@ public class ProductController {
                 .result(productService.searchProduct(keyword))
                 .build();
     }
+    //OK
 
-    @PostMapping("/{productId}/images/formdata")
-    public ApiResponse<List<String>> uploadImagesFormData(
+    @PostMapping("/{productId}/images/upload")
+    public ApiResponse<List<ProductImageResponse>> uploadImages(
             @PathVariable String productId,
             @RequestPart("files") List<MultipartFile> files,
             @RequestParam("imageType") List<String> imageTypes,
             @RequestParam("description") List<String> descriptions
     ) {
-        List<String> urls = new ArrayList<>();
-        log.info(imageTypes.toString());
-        log.info(descriptions.toString());
-        for (int i = 0; i < files.size(); i++) {
-            String url = productService.uploadImages(
-                    productId,
-                    files.get(i),
-                    imageTypes.get(i),
-                    descriptions.get(i)
-            );
-            urls.add(url);
-        }
-
-        return ApiResponse.<List<String>>builder().result(urls).build();
+        List<ProductImageResponse> responses = productService.uploadImages(productId, files, imageTypes, descriptions);
+        return ApiResponse.<List<ProductImageResponse>>builder().result(responses).build();
     }
 
     @PostMapping("/{productId}/images/update")
-    public ApiResponse<List<String>> updateImages(
+    public ApiResponse<List<ProductImageResponse>> updateImages(
             @PathVariable String productId,
             @RequestPart("files") List<MultipartFile> files,
             @RequestParam("imageType") List<String> imageTypes,
             @RequestParam("description") List<String> descriptions
     ) {
-
         List<ProductImageUploadRequest> requests = new ArrayList<>();
-
         for (int i = 0; i < files.size(); i++) {
             ProductImageUploadRequest req = new ProductImageUploadRequest();
             req.setFile(files.get(i));
@@ -123,11 +118,9 @@ public class ProductController {
             requests.add(req);
         }
 
-        List<String> urls = productService.updateProductImages(productId, requests);
-
-        return ApiResponse.<List<String>>builder()
-                .result(urls)
-                .build();
+        List<ProductImageResponse> responses = productService.updateProductImages(productId, requests);
+        return ApiResponse.<List<ProductImageResponse>>builder().result(responses).build();
     }
+
 
 }

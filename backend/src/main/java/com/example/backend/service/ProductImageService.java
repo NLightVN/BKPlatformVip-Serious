@@ -27,5 +27,6 @@ public class ProductImageService {
             throw new RuntimeException("Upload image failed");
         }
     }
+    //OK
 }
 

@@ -1,9 +1,9 @@
 package com.example.backend.controller;
 
 import com.example.backend.dto.response.ApiResponse;
-import com.example.backend.entity.District;
-import com.example.backend.entity.Province;
-import com.example.backend.entity.Ward;
+import com.example.backend.dto.response.DistrictResponse;
+import com.example.backend.dto.response.ProvinceResponse;
+import com.example.backend.dto.response.WardResponse;
 import com.example.backend.repository.DistrictRepository;
 import com.example.backend.repository.ProvinceRepository;
 import com.example.backend.repository.WardRepository;
@@ -25,23 +25,48 @@ public class LocationController {
     WardRepository wardRepository;
 
     @GetMapping("/provinces")
-    public ApiResponse<List<Province>> getAllProvinces() {
-        return ApiResponse.<List<Province>>builder()
-                .result(provinceRepository.findAll())
+    public ApiResponse<List<ProvinceResponse>> getAllProvinces() {
+        return ApiResponse.<List<ProvinceResponse>>builder()
+                .result(
+                        provinceRepository.findAll().stream()
+                                .map(p -> ProvinceResponse.builder()
+                                        .code(p.getCode())
+                                        .fullName(p.getFullName())
+                                        .build())
+                                .toList()
+                )
                 .build();
     }
 
     @GetMapping("/districts/{provinceCode}")
-    public ApiResponse<List<District>> getDistrictsByProvince(@PathVariable String provinceCode) {
-        return ApiResponse.<List<District>>builder()
-                .result(districtRepository.findAllByProvince_Code(provinceCode))
+    public ApiResponse<List<DistrictResponse>> getDistrictsByProvince(
+            @PathVariable String provinceCode
+    ) {
+        return ApiResponse.<List<DistrictResponse>>builder()
+                .result(
+                        districtRepository.findAllByProvince_Code(provinceCode).stream()
+                                .map(d -> DistrictResponse.builder()
+                                        .code(d.getCode())
+                                        .fullName(d.getFullName())
+                                        .build())
+                                .toList()
+                )
                 .build();
     }
 
     @GetMapping("/wards/{districtCode}")
-    public ApiResponse<List<Ward>> getWardsByDistrict(@PathVariable String districtCode) {
-        return ApiResponse.<List<Ward>>builder()
-                .result(wardRepository.findAllByDistrict_Code(districtCode))
+    public ApiResponse<List<WardResponse>> getWardsByDistrict(
+            @PathVariable String districtCode
+    ) {
+        return ApiResponse.<List<WardResponse>>builder()
+                .result(
+                        wardRepository.findAllByDistrict_Code(districtCode).stream()
+                                .map(w -> WardResponse.builder()
+                                        .code(w.getCode())
+                                        .fullName(w.getFullName())
+                                        .build())
+                                .toList()
+                )
                 .build();
     }
 }

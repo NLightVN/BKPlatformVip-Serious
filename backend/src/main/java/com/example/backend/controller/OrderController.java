@@ -24,14 +24,14 @@ public class OrderController {
     OrderService orderService;
 
     // Tạo order từ cart của user
-    @PostMapping("/checkout/selected/{userId}")
+    @PostMapping("/checkout/selected")
     public ApiResponse<List<OrderResponse>> checkoutSelected(
-            @PathVariable String userId,
             @RequestBody OrderSelectedItemsRequest request) {
         return ApiResponse.<List<OrderResponse>>builder()
-                .result(orderService.checkoutSelectedItems(userId, request))
+                .result(orderService.checkoutSelectedItems(request))
                 .build();
     }
+    //OK
 
     // Lấy tất cả order của user
     @GetMapping("/user/{userId}")
@@ -41,6 +41,7 @@ public class OrderController {
                 .result(orders)
                 .build();
     }
+    //OK
 
     // Lấy order theo id
     @GetMapping("/{orderId}")
@@ -50,6 +51,7 @@ public class OrderController {
                 .result(order)
                 .build();
     }
+    //OK
 
     // Cập nhật trạng thái order
     @PatchMapping("/{orderId}/status")

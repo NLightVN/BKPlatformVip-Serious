@@ -10,6 +10,7 @@ import com.example.backend.exception.AppException;
 import com.example.backend.exception.ErrorCode;
 import com.example.backend.mapper.OrderMapper;
 import com.example.backend.repository.*;
+import com.example.backend.util.SecurityUtil;
 import jakarta.transaction.Transactional;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -43,12 +44,15 @@ public class OrderService {
      * Checkout từ giỏ hàng - Tách đơn theo Shop + Tính Ship
      */
     @Transactional
-    public List<OrderResponse> checkoutSelectedItems(String userId, OrderSelectedItemsRequest request) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXIST));
+    public List<OrderResponse> checkoutSelectedItems(OrderSelectedItemsRequest request) {
+        User user = userRepository.findByUsername(
+                SecurityUtil.getCurrentUsername()
+        ).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXIST));
 
-        AddressBook userAddress = addressBookRepository.findById(request.getAddressId())
-                .orElseThrow(() -> new RuntimeException("Địa chỉ giao hàng không tồn tại"));
+        AddressBook userAddress = user.getAddress();
+        if (userAddress == null) {
+            throw new AppException(ErrorCode.ADDRESS_NOT_FOUND);
+        }
 
         Cart cart = user.getCart();
         if (cart == null || cart.getItems().isEmpty()) {
@@ -56,7 +60,10 @@ public class OrderService {
         }
 
         List<CartItem> selectedItems = cart.getItems().stream()
-                .filter(item -> request.getCartItemIds().contains(item.getId()))
+                .filter(item ->
+                        request.getProductIds()
+                                .contains(item.getProduct().getProductId())
+                )
                 .toList();
 
         if (selectedItems.isEmpty()) {

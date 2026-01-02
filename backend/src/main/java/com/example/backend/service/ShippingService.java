@@ -22,8 +22,8 @@ public class ShippingService {
 
     private static final String GHN_URL_FEE = "https://online-gateway.ghn.vn/shiip/public-api/v2/shipping-order/fee\n";
 
-    private static final String GHN_TOKEN = "";
-    private static final String GHN_SHOP_ID = "";
+    private static final String GHN_TOKEN = "721ba613-e787-11f0-8373-1a92d62e4dc3";
+    private static final String GHN_SHOP_ID = "6194695";
 
     public ShippingFeeResponse calculateShippingFee(ShippingFeeRequest request) {
         log.info("Calling GHN API... From: {}, To: {}, Weight: {}",
