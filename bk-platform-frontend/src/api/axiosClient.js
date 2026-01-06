@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const axiosClient = axios.create({
-    baseURL: 'http://localhost:8080', // URL Backend Spring Boot của bạn
+    baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8080',
 });
 
 // Interceptor: Tự động gắn Token vào mỗi request nếu đã đăng nhập
