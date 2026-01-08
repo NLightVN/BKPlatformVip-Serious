@@ -244,4 +244,112 @@ class UserServiceTest {
             verify(userRepository).deleteById("user-1");
         }
     }
+
+    // ================= BAN USER =================
+
+    @Test
+    void banUser_success() {
+        try (MockedStatic<SecurityUtil> mockedSecurityUtil = mockStatic(SecurityUtil.class)) {
+            mockedSecurityUtil.when(SecurityUtil::requireAdmin).thenAnswer(invocation -> null);
+
+            UserResponse response = UserResponse.builder()
+                    .userId("user-1")
+                    .username("testuser")
+                    .status("BANNED")
+                    .build();
+
+            when(userRepository.findById("user-1")).thenReturn(Optional.of(testUser));
+            when(userRepository.save(any())).thenReturn(testUser);
+            when(userMapper.toUserResponse(any())).thenReturn(response);
+
+            UserResponse result = userService.banUser("user-1");
+
+            assertNotNull(result);
+            assertEquals("BANNED", result.getStatus());
+            verify(userRepository).save(any());
+        }
+    }
+
+    @Test
+    void banUser_userNotExist() {
+        try (MockedStatic<SecurityUtil> mockedSecurityUtil = mockStatic(SecurityUtil.class)) {
+            mockedSecurityUtil.when(SecurityUtil::requireAdmin).thenAnswer(invocation -> null);
+
+            when(userRepository.findById("non-existent")).thenReturn(Optional.empty());
+
+            AppException exception = assertThrows(AppException.class, () -> {
+                userService.banUser("non-existent");
+            });
+
+            assertEquals(ErrorCode.USER_NOT_EXIST, exception.getErrorCode());
+        }
+    }
+
+    @Test
+    void banUser_notAdmin() {
+        try (MockedStatic<SecurityUtil> mockedSecurityUtil = mockStatic(SecurityUtil.class)) {
+            //regular user cố ban -> requireAdmin ném exception
+            mockedSecurityUtil.when(SecurityUtil::requireAdmin).thenThrow(new AppException(ErrorCode.UNAUTHORIZED));
+
+            AppException exception = assertThrows(AppException.class, () -> {
+                userService.banUser("user-1");
+            });
+
+            assertEquals(ErrorCode.UNAUTHORIZED, exception.getErrorCode());
+        }
+    }
+
+    // ================= UNBAN USER =================
+
+    @Test
+    void unbanUser_success() {
+        try (MockedStatic<SecurityUtil> mockedSecurityUtil = mockStatic(SecurityUtil.class)) {
+            mockedSecurityUtil.when(SecurityUtil::requireAdmin).thenAnswer(invocation -> null);
+
+            UserResponse response = UserResponse.builder()
+                    .userId("user-1")
+                    .username("testuser")
+                    .status("ACTIVE")
+                    .build();
+
+            when(userRepository.findById("user-1")).thenReturn(Optional.of(testUser));
+            when(userRepository.save(any())).thenReturn(testUser);
+            when(userMapper.toUserResponse(any())).thenReturn(response);
+
+            UserResponse result = userService.unbanUser("user-1");
+
+            assertNotNull(result);
+            assertEquals("ACTIVE", result.getStatus());
+            verify(userRepository).save(any());
+        }
+    }
+
+    @Test
+    void unbanUser_userNotExist() {
+        try (MockedStatic<SecurityUtil> mockedSecurityUtil = mockStatic(SecurityUtil.class)) {
+            mockedSecurityUtil.when(SecurityUtil::requireAdmin).thenAnswer(invocation -> null);
+
+            when(userRepository.findById("non-existent")).thenReturn(Optional.empty());
+
+            AppException exception = assertThrows(AppException.class, () -> {
+                userService.unbanUser("non-existent");
+            });
+
+            assertEquals(ErrorCode.USER_NOT_EXIST, exception.getErrorCode());
+        }
+    }
+
+    @Test
+    void unbanUser_notAdmin() {
+        try (MockedStatic<SecurityUtil> mockedSecurityUtil = mockStatic(SecurityUtil.class)) {
+            //regular user cố unban -> requireAdmin ném exception
+            mockedSecurityUtil.when(SecurityUtil::requireAdmin).thenThrow(new AppException(ErrorCode.UNAUTHORIZED));
+
+            AppException exception = assertThrows(AppException.class, () -> {
+                userService.unbanUser("user-1");
+            });
+
+            assertEquals(ErrorCode.UNAUTHORIZED, exception.getErrorCode());
+        }
+    }
 }

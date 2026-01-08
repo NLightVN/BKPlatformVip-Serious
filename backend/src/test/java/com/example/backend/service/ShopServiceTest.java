@@ -195,4 +195,68 @@ class ShopServiceTest {
         assertEquals(1, results.size());
         assertEquals("testuser", results.get(0).getOwnerUsername());
     }
+
+    // ================= BAN SHOP =================
+
+    @Test
+    void banShop_success() {
+        ShopResponse response = ShopResponse.builder()
+                .shopId("shop-1")
+                .name("Test Shop")
+                .status("BANNED")
+                .build();
+
+        when(shopRepository.findById("shop-1")).thenReturn(Optional.of(testShop));
+        when(shopRepository.save(any())).thenReturn(testShop);
+        when(shopMapper.toShopResponse(any())).thenReturn(response);
+
+        ShopResponse result = shopService.banShop("shop-1");
+
+        assertNotNull(result);
+        assertEquals("BANNED", result.getStatus());
+        verify(shopRepository).save(any());
+    }
+
+    @Test
+    void banShop_shopNotExist() {
+        when(shopRepository.findById("non-existent")).thenReturn(Optional.empty());
+
+        AppException exception = assertThrows(AppException.class, () -> {
+            shopService.banShop("non-existent");
+        });
+
+        assertEquals(ErrorCode.SHOP_NOT_EXIST, exception.getErrorCode());
+    }
+
+    // ================= UNBAN SHOP =================
+
+    @Test
+    void unbanShop_success() {
+        ShopResponse response = ShopResponse.builder()
+                .shopId("shop-1")
+                .name("Test Shop")
+                .status("ACTIVE")
+                .build();
+
+        when(shopRepository.findById("shop-1")).thenReturn(Optional.of(testShop));
+        when(shopRepository.save(any())).thenReturn(testShop);
+        when(shopMapper.toShopResponse(any())).thenReturn(response);
+
+        ShopResponse result = shopService.unbanShop("shop-1");
+
+        assertNotNull(result);
+        assertEquals("ACTIVE", result.getStatus());
+        verify(shopRepository).save(any());
+    }
+
+    @Test
+    void unbanShop_shopNotExist() {
+        when(shopRepository.findById("non-existent")).thenReturn(Optional.empty());
+
+        AppException exception = assertThrows(AppException.class, () -> {
+            shopService.unbanShop("non-existent");
+        });
+
+        assertEquals(ErrorCode.SHOP_NOT_EXIST, exception.getErrorCode());
+    }
 }

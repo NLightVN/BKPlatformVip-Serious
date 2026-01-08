@@ -328,17 +328,81 @@ class ProductServiceTest {
     @Test
     void searchProduct_success() {
         ProductResponse response = ProductResponse.builder()
-                .productId("product-1")
-                .name("iPhone")
+                .productId("prod-1")
+                .productName("Laptop Dell")
                 .build();
 
-        when(productRepository.findByNameContainingIgnoreCase("iphone"))
+        when(productRepository.findByProductNameContainingIgnoreCase("Laptop"))
                 .thenReturn(List.of(testProduct));
         when(productMapper.toProductResponse(testProduct)).thenReturn(response);
 
-        List<ProductResponse> results = productService.searchProduct("iPhone");
+        List<ProductResponse> results = productService.searchProduct("Laptop");
 
         assertNotNull(results);
         assertEquals(1, results.size());
+    }
+
+    // ================= BAN PRODUCT =================
+
+    @Test
+    void banProduct_success() {
+        ProductResponse response = ProductResponse.builder()
+                .productId("prod-1")
+                .productName("Test Product")
+                .status("BANNED")
+                .build();
+
+        when(productRepository.findById("prod-1")).thenReturn(Optional.of(testProduct));
+        when(productRepository.save(any())).thenReturn(testProduct);
+        when(productMapper.toProductResponse(any())).thenReturn(response);
+
+        ProductResponse result = productService.banProduct("prod-1");
+
+        assertNotNull(result);
+        assertEquals("BANNED", result.getStatus());
+        verify(productRepository).save(any());
+    }
+
+    @Test
+    void banProduct_productNotExist() {
+        when(productRepository.findById("non-existent")).thenReturn(Optional.empty());
+
+        AppException exception = assertThrows(AppException.class, () -> {
+            productService.banProduct("non-existent");
+        });
+
+        assertEquals(ErrorCode.PRODUCT_NOT_EXIST, exception.getErrorCode());
+    }
+
+    // ================= UNBAN PRODUCT =================
+
+    @Test
+    void unbanProduct_success() {
+        ProductResponse response = ProductResponse.builder()
+                .productId("prod-1")
+                .productName("Test Product")
+                .status("ACTIVE")
+                .build();
+
+        when(productRepository.findById("prod-1")).thenReturn(Optional.of(testProduct));
+        when(productRepository.save(any())).thenReturn(testProduct);
+        when(productMapper.toProductResponse(any())).thenReturn(response);
+
+        ProductResponse result = productService.unbanProduct("prod-1");
+
+        assertNotNull(result);
+        assertEquals("ACTIVE", result.getStatus());
+        verify(productRepository).save(any());
+    }
+
+    @Test
+    void unbanProduct_productNotExist() {
+        when(productRepository.findById("non-existent")).thenReturn(Optional.empty());
+
+        AppException exception = assertThrows(AppException.class, () -> {
+            productService.unbanProduct("non-existent");
+        });
+
+        assertEquals(ErrorCode.PRODUCT_NOT_EXIST, exception.getErrorCode());
     }
 }
