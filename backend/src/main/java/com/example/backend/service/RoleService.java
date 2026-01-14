@@ -2,6 +2,8 @@ package com.example.backend.service;
 
 import com.example.backend.dto.response.RoleResponse;
 import com.example.backend.dto.request.RoleRequest;
+import com.example.backend.exception.AppException;
+import com.example.backend.exception.ErrorCode;
 import com.example.backend.mapper.RoleMapper;
 import com.example.backend.repository.RoleRepository;
 import lombok.AccessLevel;
@@ -26,6 +28,10 @@ public class RoleService {
 
     public RoleResponse create(RoleRequest request) {
         requireAdmin();
+        if (roleRepository.existsByName(request.getName())) {
+            throw new AppException(ErrorCode.ROLE_EXISTED);
+        }
+
         var role = roleMapper.toRole(request);
         // dùng findById nếu nhận vào 1 phần tử
         // dùng findAllById khi nhận  vào 1 Iterable

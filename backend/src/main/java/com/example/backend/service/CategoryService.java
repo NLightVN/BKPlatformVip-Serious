@@ -13,7 +13,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-
+import com.example.backend.entity.Product;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -57,9 +57,14 @@ public class CategoryService {
         String normalizedName = normalize(categoryName);
         Category category = categoryRepository.findByName(normalizedName)
                 .orElseThrow(() -> new AppException(ErrorCode.CATEGORY_NOT_EXIST));
-        if(category.getProducts()!=null && !category.getProducts().isEmpty()){
-            throw new AppException(ErrorCode.CATEGORY_USED_BY_PRODUCT);
+        
+        // Remove category from all products that use it
+        if(category.getProducts() != null && !category.getProducts().isEmpty()){
+            for(Product product : category.getProducts()){
+                product.getCategories().remove(category);
+            }
         }
+        
         categoryRepository.delete(category);
     }
 

@@ -6,11 +6,14 @@ import com.example.backend.dto.request.UserCreationRequest;
 import com.example.backend.dto.request.UserUpdateRequest;
 import com.example.backend.entity.User;
 import com.example.backend.entity.Role;
+import com.example.backend.entity.AddressBook;
+import com.example.backend.entity.Ward;
 import com.example.backend.exception.AppException;
 import com.example.backend.exception.ErrorCode;
 import com.example.backend.mapper.UserMapper;
 import com.example.backend.repository.RoleRepository;
 import com.example.backend.repository.UserRepository;
+import com.example.backend.repository.WardRepository;
 import com.example.backend.util.SecurityUtil;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -41,6 +44,7 @@ public class UserService {
     UserMapper userMapper;
     PasswordEncoder passwordEncoder;
     RoleRepository roleRepository;
+    WardRepository wardRepository;
 
     @Transactional
     public UserResponse createUser(UserCreationRequest request) {
@@ -86,12 +90,43 @@ public class UserService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXIST));
 
+        if (request.getEmail() != null
+                && !request.getEmail().equals(user.getEmail())
+                && userRepository.existsByEmail(request.getEmail())) {
+            throw new AppException(ErrorCode.EMAIL_EXISTED);
+        }
+
         if (!user.getUsername().equals(currentUsername)
                 && !SecurityUtil.hasRole("ADMIN")) {
             throw new AppException(ErrorCode.UNAUTHORIZED);
         }
 
-        userMapper.updateUser(user, request);
+        // Handle address update manually
+        if (request.getAddress() != null) {
+            AddressBook addressBook = user.getAddress();
+            if (addressBook == null) {
+                addressBook = new AddressBook();
+            }
+            addressBook.setName(request.getAddress().getName());
+            addressBook.setPhone(request.getAddress().getPhone());
+            addressBook.setAddressDetail(request.getAddress().getAddressDetail());
+            
+            if (request.getAddress().getWardCode() != null) {
+                Ward ward = wardRepository.findById(request.getAddress().getWardCode())
+                        .orElseThrow(() -> new AppException(ErrorCode.WARD_NOT_FOUND));
+                addressBook.setWard(ward);
+            }
+            
+            user.setAddress(addressBook);
+        }
+
+        // Update other fields
+        if (request.getFullname() != null) {
+            user.setFullname(request.getFullname());
+        }
+        if (request.getEmail() != null) {
+            user.setEmail(request.getEmail());
+        }
 
         if (request.getPassword() != null && !request.getPassword().isBlank()) {
             user.setPassword(passwordEncoder.encode(request.getPassword()));
@@ -104,7 +139,6 @@ public class UserService {
             var roles = roleRepository.findAllById(request.getRoles());
             user.setRoles(new HashSet<>(roles));
         }
-
 
         return userMapper.toUserResponse(userRepository.save(user));
     }
@@ -122,8 +156,29 @@ public class UserService {
 
 
     public void deleteUser(String userId) {
-
         requireAdmin();
         userRepository.deleteById(userId);
+    }
+
+    // Ban user (Admin only)
+    @Transactional
+    public UserResponse banUser(String userId) {
+        requireAdmin();
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXIST));
+        
+        user.setStatus("BANNED");
+        return userMapper.toUserResponse(userRepository.save(user));
+    }
+
+    // Unban user (Admin only)
+    @Transactional
+    public UserResponse unbanUser(String userId) {
+        requireAdmin();
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXIST));
+        
+        user.setStatus("ACTIVE");
+        return userMapper.toUserResponse(userRepository.save(user));
     }
 }

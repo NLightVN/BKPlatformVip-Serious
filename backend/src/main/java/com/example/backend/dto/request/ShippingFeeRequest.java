@@ -6,6 +6,7 @@ import lombok.Data;
 public class ShippingFeeRequest {
     String fromDistrictCode;
     String toDistrictCode;
+    String fromWardCode;
     String toWardCode;
     int weightGram;
 }

@@ -116,6 +116,35 @@ public class CartService {
     }
 
     @Transactional
+    public CartResponse updateCartItem(CartRequest request, String userId) {
+        User user = authorizeCartAccess(userId);
+
+        if (request.getQuantity() < 0) {
+            throw new AppException(ErrorCode.INVALID_VALUE);
+        }
+
+        Cart cart = user.getCart();
+        if (cart == null || cart.getItems().isEmpty()) {
+            throw new AppException(ErrorCode.CART_EMPTY);
+        }
+
+        CartItem existingItem = cart.getItems()
+                .stream().filter(item-> item.getProduct().getProductId()
+                        .equals(request.getProductId())).findFirst()
+                .orElseThrow(() -> new AppException(ErrorCode.CART_ITEM_NOT_EXIST));
+
+        if (request.getQuantity() == 0) {
+            cart.getItems().remove(existingItem);
+        } else {
+            existingItem.setQuantity(request.getQuantity());
+        }
+
+        cart.setTotalAmount(calculateTotalAmount(cart));
+        cartRepository.saveAndFlush(cart);
+        return cartMapper.toCartResponse(cart);
+    }
+
+    @Transactional
     public CartResponse getCartByUser(String userId) {
         User user = authorizeCartAccess(userId);;
 

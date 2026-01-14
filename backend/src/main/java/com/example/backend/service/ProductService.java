@@ -39,7 +39,25 @@ public class ProductService {
     CategoryRepository categoryRepository;
     ProductImageRepository productImageRepository;
     ProductImageService productImageService;
-
+    public List<ProductResponse> getAllProducts() {
+        // Product is visible ONLY if both product AND shop are ACTIVE
+        // Hidden if: product.status != "ACTIVE" OR shop.status != "ACTIVE"
+        return productRepository.findAll().stream()
+                .filter(p -> "ACTIVE".equals(p.getStatus()) &&
+                            p.getShop() != null &&
+                            "ACTIVE".equals(p.getShop().getStatus()))
+                .map(productMapper::toProductResponse)
+                .toList();
+    }
+    
+    // For admin - show all products including banned, but NOT deleted
+    public List<ProductResponse> getAllProductsGlobal() {
+        return productRepository.findAll().stream()
+                .filter(product -> !"DELETED".equals(product.getStatus()))  
+                .map(productMapper::toProductResponse)
+                .collect(Collectors.toList());
+    }
+    
     public ProductResponse createProduct(ProductCreationRequest request) {
         String currentUsername = SecurityUtil.getCurrentUsername();
         Shop shop = shopRepository.findById(request.getShopId()).orElseThrow(()->new AppException(ErrorCode.SHOP_NOT_EXIST));
@@ -71,7 +89,10 @@ public class ProductService {
 
     public List<ProductResponse> getAllProducts(String shopId) {
         Shop shop = shopRepository.findById(shopId).orElseThrow(()->new AppException(ErrorCode.SHOP_NOT_EXIST));
-        return productRepository.findAllByShop(shop).stream().map(productMapper::toProductResponse).collect(Collectors.toList());
+        return productRepository.findAllByShop(shop).stream()
+                .filter(product -> !"DELETED".equals(product.getStatus())) // Filter out deleted products
+                .map(productMapper::toProductResponse)
+                .collect(Collectors.toList());
     }
 
 
@@ -112,26 +133,50 @@ public class ProductService {
                 !product.getShop().getOwner().getUsername().equals(currentUsername)) {
             throw new AppException(ErrorCode.UNAUTHORIZED);
         }
-        productRepository.delete(product);
+        
+        // Soft delete - just mark as deleted
+        product.setStatus("DELETED");
+        productRepository.save(product);
     }
 
     public List<ProductResponse> getProductsByCategory(String categoryName) {
         String normalized = normalize(categoryName);
         return productRepository.findAllByCategories_Name(normalized)
-                .stream().map(productMapper::toProductResponse)
+                .stream()
+                .filter(product -> !"DELETED".equals(product.getStatus()))  // Filter out deleted products
+                .map(productMapper::toProductResponse)
                 .collect(Collectors.toList());
     }
 
     public List<ProductResponse> getProductsByBrand(String brand) {
         return productRepository.findAllByBrandIgnoreCase(brand)
-                .stream().map(productMapper::toProductResponse)
+                .stream()
+                .filter(product -> !"DELETED".equals(product.getStatus()))  // Filter out deleted products
+                .map(productMapper::toProductResponse)
                 .collect(Collectors.toList());
+    }
+
+    public List<ProductResponse> getProductsByShop(String shopId) {
+        // Get all products of shop, filter by both product and shop status
+        Shop shop = shopRepository.findById(shopId)
+                .orElseThrow(() -> new AppException(ErrorCode.SHOP_NOT_EXIST));
+        
+        List<Product> products = productRepository.findAllByShop(shop);
+        
+        return products.stream()
+                .filter(p -> "ACTIVE".equals(p.getStatus()) && 
+                            p.getShop() != null && 
+                            "ACTIVE".equals(p.getShop().getStatus()))
+                .map(productMapper::toProductResponse)
+                .toList();
     }
 
     public List<ProductResponse> searchProduct(String keyword) {
         String normalized = normalize(keyword);
         return productRepository.findByNameContainingIgnoreCase(normalized)
-                .stream().map(productMapper::toProductResponse)
+                .stream()
+                .filter(product -> !"DELETED".equals(product.getStatus()))  // Filter out deleted products
+                .map(productMapper::toProductResponse)
                 .collect(Collectors.toList());
     }
 
@@ -142,7 +187,7 @@ public class ProductService {
 
 
 
-    public List<ProductImageResponse> uploadImages(String productId, List<MultipartFile> files, List<String> imageTypes, List<String> descriptions) {
+    public List<ProductImageResponse> uploadImages(String productId, List<MultipartFile> files) {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_EXIST));
 
@@ -155,22 +200,22 @@ public class ProductService {
 
         List<ProductImageResponse> responses = new ArrayList<>();
 
-        for (int i = 0; i < files.size(); i++) {
-            String url = productImageService.uploadImage(files.get(i), "product-upload-preset");
+        for (MultipartFile file : files) {
+            String url = productImageService.uploadImage(file, "product-upload-preset");
 
             ProductImage img = ProductImage.builder()
                     .product(product)
                     .imageUrl(url)
-                    .imageType(imageTypes.get(i))
-                    .description(descriptions.get(i))
                     .build();
 
+            // Initialize images Set if null
+            if (product.getImages() == null) {
+                product.setImages(new java.util.HashSet<>());
+            }
             product.getImages().add(img);
 
             responses.add(ProductImageResponse.builder()
                     .imageUrl(url)
-                    .imageType(imageTypes.get(i))
-                    .description(descriptions.get(i))
                     .build());
         }
 
@@ -201,16 +246,12 @@ public class ProductService {
             ProductImage newImg = ProductImage.builder()
                     .product(product)
                     .imageUrl(url)
-                    .imageType(img.getImageType())
-                    .description(img.getDescription())
                     .build();
 
             product.getImages().add(newImg);
 
             responses.add(ProductImageResponse.builder()
                     .imageUrl(url)
-                    .imageType(img.getImageType())
-                    .description(img.getDescription())
                     .build());
         }
 
@@ -218,5 +259,24 @@ public class ProductService {
         return responses;
     }
 
+    // Ban product (Admin only)
+    public ProductResponse banProduct(String productId) {
+        SecurityUtil.requireAdmin();
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_EXIST));
+        
+        product.setStatus("BANNED");
+        return productMapper.toProductResponse(productRepository.save(product));
+    }
+
+    // Unban product (Admin only)
+    public ProductResponse unbanProduct(String productId) {
+        SecurityUtil.requireAdmin();
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_EXIST));
+        
+        product.setStatus("ACTIVE");
+        return productMapper.toProductResponse(productRepository.save(product));
+    }
 
 }

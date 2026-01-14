@@ -31,7 +31,12 @@ public class ProductController {
                 .build();
     }
     //OK
-
+    @GetMapping
+    public ApiResponse<List<ProductResponse>> getAllProducts() {
+        return ApiResponse.<List<ProductResponse>>builder()
+                .result(productService.getAllProductsGlobal())
+                .build();
+    }
     @GetMapping("/shop/{shopId}")
     ApiResponse<List<ProductResponse>> getAllProductsByShopId(@PathVariable String shopId) {
         return ApiResponse.<List<ProductResponse>>builder()
@@ -94,27 +99,22 @@ public class ProductController {
     @PostMapping("/{productId}/images/upload")
     public ApiResponse<List<ProductImageResponse>> uploadImages(
             @PathVariable String productId,
-            @RequestPart("files") List<MultipartFile> files,
-            @RequestParam("imageType") List<String> imageTypes,
-            @RequestParam("description") List<String> descriptions
+            @RequestPart("files") List<MultipartFile> files
     ) {
-        List<ProductImageResponse> responses = productService.uploadImages(productId, files, imageTypes, descriptions);
+        List<ProductImageResponse> responses = productService.uploadImages(productId, files);
         return ApiResponse.<List<ProductImageResponse>>builder().result(responses).build();
     }
+
 
     @PostMapping("/{productId}/images/update")
     public ApiResponse<List<ProductImageResponse>> updateImages(
             @PathVariable String productId,
-            @RequestPart("files") List<MultipartFile> files,
-            @RequestParam("imageType") List<String> imageTypes,
-            @RequestParam("description") List<String> descriptions
+            @RequestPart("files") List<MultipartFile> files
     ) {
         List<ProductImageUploadRequest> requests = new ArrayList<>();
-        for (int i = 0; i < files.size(); i++) {
+        for (MultipartFile file : files) {
             ProductImageUploadRequest req = new ProductImageUploadRequest();
-            req.setFile(files.get(i));
-            req.setImageType(imageTypes.get(i));
-            req.setDescription(descriptions.get(i));
+            req.setFile(file);
             requests.add(req);
         }
 

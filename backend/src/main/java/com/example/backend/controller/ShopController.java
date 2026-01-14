@@ -20,6 +20,7 @@ import java.util.List;
 @Slf4j
 public class ShopController {
     ShopService shopService;
+    com.example.backend.service.OrderService orderService;
 
     @PostMapping
     ApiResponse createShop(@Valid @RequestBody ShopCreationRequest request){
@@ -69,6 +70,21 @@ public class ShopController {
         }
 
         return ApiResponse.<List<ShopResponse>>builder().result(shops).build();
+    }
+
+    @DeleteMapping("/{shopId}")
+    ApiResponse<Void> deleteShop(@PathVariable String shopId) {
+        shopService.deleteShop(shopId);
+        return ApiResponse.<Void>builder()
+                .message("Shop deleted successfully")
+                .build();
+    }
+
+    @GetMapping("/{shopId}/revenue")
+    ApiResponse<com.example.backend.dto.response.ShopRevenueResponse> getShopRevenue(@PathVariable String shopId) {
+        return ApiResponse.<com.example.backend.dto.response.ShopRevenueResponse>builder()
+                .result(orderService.getShopRevenue(shopId))
+                .build();
     }
 
 }

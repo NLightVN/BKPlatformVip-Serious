@@ -4,9 +4,7 @@ import com.example.backend.dto.response.ApiResponse;
 import com.example.backend.dto.response.DistrictResponse;
 import com.example.backend.dto.response.ProvinceResponse;
 import com.example.backend.dto.response.WardResponse;
-import com.example.backend.repository.DistrictRepository;
-import com.example.backend.repository.ProvinceRepository;
-import com.example.backend.repository.WardRepository;
+import com.example.backend.service.LocationService;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -20,21 +18,12 @@ import java.util.List;
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class LocationController {
 
-    ProvinceRepository provinceRepository;
-    DistrictRepository districtRepository;
-    WardRepository wardRepository;
+    LocationService locationService;
 
     @GetMapping("/provinces")
     public ApiResponse<List<ProvinceResponse>> getAllProvinces() {
         return ApiResponse.<List<ProvinceResponse>>builder()
-                .result(
-                        provinceRepository.findAll().stream()
-                                .map(p -> ProvinceResponse.builder()
-                                        .code(p.getCode())
-                                        .fullName(p.getFullName())
-                                        .build())
-                                .toList()
-                )
+                .result(locationService.getAllProvinces())
                 .build();
     }
 
@@ -43,14 +32,7 @@ public class LocationController {
             @PathVariable String provinceCode
     ) {
         return ApiResponse.<List<DistrictResponse>>builder()
-                .result(
-                        districtRepository.findAllByProvince_Code(provinceCode).stream()
-                                .map(d -> DistrictResponse.builder()
-                                        .code(d.getCode())
-                                        .fullName(d.getFullName())
-                                        .build())
-                                .toList()
-                )
+                .result(locationService.getDistrictsByProvince(provinceCode))
                 .build();
     }
 
@@ -59,14 +41,7 @@ public class LocationController {
             @PathVariable String districtCode
     ) {
         return ApiResponse.<List<WardResponse>>builder()
-                .result(
-                        wardRepository.findAllByDistrict_Code(districtCode).stream()
-                                .map(w -> WardResponse.builder()
-                                        .code(w.getCode())
-                                        .fullName(w.getFullName())
-                                        .build())
-                                .toList()
-                )
+                .result(locationService.getWardsByDistrict(districtCode))
                 .build();
     }
 }

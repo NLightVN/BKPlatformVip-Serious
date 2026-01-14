@@ -27,6 +27,14 @@ public class CartController {
                 .build();
     }
 
+    @PutMapping("/update/{userId}")
+    public ApiResponse<CartResponse> updateCartItem(@PathVariable String userId,
+                                                    @RequestBody CartRequest request) {
+        return ApiResponse.<CartResponse>builder()
+                .result(cartService.updateCartItem(request, userId))
+                .build();
+    }
+
     @DeleteMapping("/remove/{userId}/{productId}")
     public ApiResponse<CartResponse> removeFromCart(@PathVariable String userId,
                                                     @PathVariable String productId) {

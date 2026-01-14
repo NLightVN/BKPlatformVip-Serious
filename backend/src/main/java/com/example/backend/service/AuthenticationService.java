@@ -60,17 +60,8 @@ public class AuthenticationService {
 
     public AuthenticationResponse authenticate(AuthenticationRequest request) {
         var user = userRepository.findByUsername(request.getUsername()).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXIST));
-        log.info(">>> Auth user found: {}", user.getUsername());
-        log.info(">>> Auth user email: {}", user.getEmail());
-        log.info(">>> Input password: {}", request.getPassword());
-        log.info(">>> Stored hash: {}", user.getPassword());
         boolean authenticated = passwordEncoder.matches(request.getPassword(), user.getPassword());
         if (!authenticated) {
-            log.error("Invalid username or password");
-            log.info("Password encoder instance: {}", passwordEncoder);
-            log.info("is match: {}", passwordEncoder.matches("12345678910", user.getPassword()));
-            log.info(request.getPassword());
-            log.info(user.getPassword());
             throw new AppException(ErrorCode.UNAUTHENTICATED);
         }
         var token = generateToken(user);
